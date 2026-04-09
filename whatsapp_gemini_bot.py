@@ -1,4 +1,3 @@
-"""
 WhatsApp AI Bot — Green-API + Gemini Bridge
 ============================================
 Production-ready version for Render.com FREE Web Service tier.
@@ -103,6 +102,64 @@ def get_gemini_reply(sender_id: str, user_message: str) -> str:
         reply = response.text.strip()
     except Exception as e:
         print(f"[gemini] Error: {e}")
+        history.pop()
+        return "Sorry, I ran into a problem. Please try again."
+
+    history.append(types.Content(role="model", parts=[types.Part(text=reply)]))
+
+    if len(history) > 20:
+        conversations[sender_id] = history[-20:]
+
+    return reply
+
+
+# ── Main bot loop ─────────────────────────────
+def main():
+    print("✅ WhatsApp-Gemini bot is running.\n")
+    while True:
+        notification = receive_notification()
+
+        if notification:
+            receipt_id = notification.get("receiptId")
+            body = notification.get("body", {})
+            type_webhook = body.get("typeWebhook")
+
+            if type_webhook == "incomingMessageReceived":
+                message_data = body.get("messageData", {})
+                msg_type = message_data.get("typeMessage")
+
+                if msg_type == "textMessage":
+                    text_data = message_data.get("textMessageData", {})
+                    user_text = text_data.get("textMessage", "").strip()
+                    sender_data = body.get("senderData", {})
+                    chat_id = sender_data.get("chatId", "")
+                    sender_name = sender_data.get("senderName", "User")
+
+                    if user_text and chat_id:
+                        print(f"[recv] {sender_name} ({chat_id}): {user_text}")
+                        reply = get_gemini_reply(chat_id, user_text)
+                        send_message(chat_id, reply)
+
+            if receipt_id:
+                delete_notification(receipt_id)
+
+        time.sleep(POLLING_INTERVAL)
+
+
+# ── Flask web server (keeps Render free tier alive) ──
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def home():
+    return "WhatsApp-Gemini bot is running ✅", 200
+
+
+if __name__ == "__main__":
+    bot_thread = threading.Thread(target=main, daemon=True)
+    bot_thread.start()
+
+    port = int(os.environ.get("PORT", 5000))
+    flask_app.run(host="0.0.0.0", port=port)        print(f"[gemini] Error: {e}")
         history.pop()
         return "Sorry, I ran into a problem. Please try again."
 
