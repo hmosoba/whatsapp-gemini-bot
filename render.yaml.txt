@@ -1,0 +1,13 @@
+services:
+  - type: worker
+    name: whatsapp-gemini-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python whatsapp_gemini_bot.py
+    envVars:
+      - key: GREEN_API_ID_INSTANCE
+        sync: false
+      - key: GREEN_API_TOKEN_INSTANCE
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
